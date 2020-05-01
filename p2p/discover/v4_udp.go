@@ -22,10 +22,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	crand "crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -439,6 +442,23 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) (
 	nreceived := 0
 	rm := t.pending(toid, toaddr.IP, p_neighborsV4, func(r interface{}) (matched bool, requestDone bool) {
 		reply := r.(*neighborsV4)
+		// fmt.Printf(toaddr.IP.String())
+		givenNode := toaddr.IP.String()
+		neighbours := make(map[string][]string)
+		for _, rn := range reply.Nodes {
+			neighbours[givenNode] = append(neighbours[givenNode], rn.IP.String())
+		}
+		neighbourGraphData, err := json.Marshal(neighbours)
+		fullNeighbourData, err := json.Marshal(reply)
+		dataDirectory := "icarus-files/"
+		if err == nil {
+			ioutil.WriteFile(dataDirectory + "fullNeighbourData.json", fullNeighbourData, os.ModePerm)
+			ioutil.WriteFile(dataDirectory + "neighbourGraphData.json", neighbourGraphData, os.ModePerm)
+		} else {
+			fmt.Printf("didn't work")
+		}
+		// fmt.Printf("%+v\n", reply)
+		os.Exit(1)
 		for _, rn := range reply.Nodes {
 			nreceived++
 			n, err := t.nodeFromRPC(toaddr, rn)

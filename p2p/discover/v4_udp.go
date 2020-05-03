@@ -53,6 +53,15 @@ var (
 	errLowPort          = errors.New("low port")
 )
 
+type Graph struct {
+	DiscoveryNodes []DiscoveryNode `json:"nodes"`
+}
+
+type DiscoveryNode struct {
+	IP string `json:"ip"`
+	Neighbours []string `json:"neighbours"`
+}
+
 const (
 	respTimeout    = 500 * time.Millisecond
 	expiration     = 20 * time.Second
@@ -443,22 +452,30 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) (
 	rm := t.pending(toid, toaddr.IP, p_neighborsV4, func(r interface{}) (matched bool, requestDone bool) {
 		reply := r.(*neighborsV4)
 		// fmt.Printf(toaddr.IP.String())
-		givenNode := toaddr.IP.String()
-		neighbours := make(map[string][]string)
-		for _, rn := range reply.Nodes {
-			neighbours[givenNode] = append(neighbours[givenNode], rn.IP.String())
-		}
-		neighbourGraphData, err := json.Marshal(neighbours)
-		fullNeighbourData, err := json.Marshal(reply)
 		dataDirectory := "icarus-files/"
+		jsonFile, _ := os.Open(dataDirectory + "somedata.json")
+		defer jsonFile.Close()
+		byteValue, _ := ioutil.ReadAll(jsonFile)
+		var existingGraph Graph
+		json.Unmarshal([]byte(byteValue), &existingGraph)
+
+		givenNode := toaddr.IP.String()
+		neighbours := make([]string, 0)
+		for _, rn := range reply.Nodes {
+			neighbours = append(neighbours, rn.IP.String())
+		}
+		var newNode DiscoveryNode
+		newNode.IP = givenNode
+		newNode.Neighbours = neighbours
+		existingGraph.DiscoveryNodes = append(existingGraph.DiscoveryNodes, newNode)
+		neighbourGraphData, err := json.Marshal(existingGraph)
+		//fullNeighbourData, err := json.Marshal(reply)
 		if err == nil {
-			ioutil.WriteFile(dataDirectory + "fullNeighbourData.json", fullNeighbourData, os.ModePerm)
-			ioutil.WriteFile(dataDirectory + "neighbourGraphData.json", neighbourGraphData, os.ModePerm)
+			//ioutil.WriteFile(dataDirectory + "fullNeighbourData.json", fullNeighbourData, os.ModePerm)
+			ioutil.WriteFile(dataDirectory + "somedata.json", neighbourGraphData, os.ModePerm)
 		} else {
 			fmt.Printf("didn't work")
 		}
-		// fmt.Printf("%+v\n", reply)
-		os.Exit(1)
 		for _, rn := range reply.Nodes {
 			nreceived++
 			n, err := t.nodeFromRPC(toaddr, rn)

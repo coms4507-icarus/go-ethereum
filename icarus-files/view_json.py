@@ -16,12 +16,15 @@ if __name__ == "__main__":
         exit()
     with open(sys.argv[1], "r") as f:
         data = json.load(f)
-        ips = []
-        for node in data['Nodes']:
-            ip = node['IP']
-            ips.append(ip)
-
-        # print_pretty(data)
-        print(f"There were {len(data['Nodes'])} nodes.")
+        print_pretty(data)
+#     with open(sys.argv[1], "r") as f:
+#         data = json.load(f)
+#         ips = []
+#         for node in data['Nodes']:
+#             ip = node['IP']
+#             ips.append(ip)
+#
+#         # print_pretty(data)
+#         print(f"There were {len(data['Nodes'])} nodes.")
     
-    write_json_to_file("icarus-files/ips.json", ips)
+    # write_json_to_file("icarus-files/ips.json", ips)

@@ -451,18 +451,26 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) (
 	nreceived := 0
 	rm := t.pending(toid, toaddr.IP, p_neighborsV4, func(r interface{}) (matched bool, requestDone bool) {
 		reply := r.(*neighborsV4)
-		// fmt.Printf(toaddr.IP.String())
+		givenNode := toaddr.IP.String()
+		for _, rn := range reply.Nodes {
+			nreceived++
+			n, err := t.nodeFromRPC(toaddr, rn)
+			if err != nil {
+				t.log.Trace("Invalid neighbor node received", "ip", rn.IP, "addr", toaddr, "err", err)
+				continue
+			}
+			nodes = append(nodes, n)
+		}
 		dataDirectory := "icarus-files/"
-		jsonFile, _ := os.Open(dataDirectory + "somedata.json")
+		dataFileName := "graph-data-raw.json"
+		jsonFile, _ := os.Open(dataDirectory + dataFileName)
 		defer jsonFile.Close()
 		byteValue, _ := ioutil.ReadAll(jsonFile)
 		var existingGraph Graph
 		json.Unmarshal([]byte(byteValue), &existingGraph)
-
-		givenNode := toaddr.IP.String()
 		neighbours := make([]string, 0)
-		for _, rn := range reply.Nodes {
-			neighbours = append(neighbours, rn.IP.String())
+		for _, node := range nodes {
+			neighbours = append(neighbours, node.IP().String())
 		}
 		var newNode DiscoveryNode
 		newNode.IP = givenNode
@@ -472,18 +480,9 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) (
 		//fullNeighbourData, err := json.Marshal(reply)
 		if err == nil {
 			//ioutil.WriteFile(dataDirectory + "fullNeighbourData.json", fullNeighbourData, os.ModePerm)
-			ioutil.WriteFile(dataDirectory + "somedata.json", neighbourGraphData, os.ModePerm)
+			ioutil.WriteFile(dataDirectory + dataFileName, neighbourGraphData, os.ModePerm)
 		} else {
 			fmt.Printf("didn't work")
-		}
-		for _, rn := range reply.Nodes {
-			nreceived++
-			n, err := t.nodeFromRPC(toaddr, rn)
-			if err != nil {
-				t.log.Trace("Invalid neighbor node received", "ip", rn.IP, "addr", toaddr, "err", err)
-				continue
-			}
-			nodes = append(nodes, n)
 		}
 		return true, nreceived >= bucketSize
 	})

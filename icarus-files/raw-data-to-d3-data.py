@@ -40,30 +40,6 @@ def get_adj_list(filename):
                 result[ip].append(neighbour)
         return result
 
-
-def data_to_graph_data(filename):
-    with open(filename,"r") as f:
-        data = json.load(f)
-        nodes = data["nodes"]
-
-        result = {}
-        result["nodes"] = create_boot_nodes()
-        result["links"] = []
-
-        seen_before = set(list(BOOT_NODES))
-
-        for node in nodes:
-            ip = node["ip"]
-            if ip not in seen_before:
-                seen_before.add(ip)
-                result["nodes"].append(create_node(ip, 2))
-            for neighbour in node["neighbours"]:
-                result["links"].append(create_link(ip, neighbour))
-                if neighbour not in seen_before:
-                    seen_before.add(neighbour)
-                    result["nodes"].append(create_node(neighbour, 2))
-    write_json_to_file("graph-data-d3-ready.json", result)
-
 def data_to_graph_data_from_boot_nodes(filename, levels):
     with open(filename,"r") as f:
         data = json.load(f)
@@ -73,8 +49,10 @@ def data_to_graph_data_from_boot_nodes(filename, levels):
         result["nodes"] = create_boot_nodes()
         result["links"] = []
 
+        levels_remaining = levels
 
         adj_list = get_adj_list(filename)
+        write_json_to_file("graph-data-adj-list.json", adj_list)
         
         visited = set(list(BOOT_NODES))
         q = deque(list(BOOT_NODES))
@@ -88,12 +66,13 @@ def data_to_graph_data_from_boot_nodes(filename, levels):
                     visited.add(neighbour)
                 result["links"].append(create_link(ip, neighbour))
             if ip == final_node:
-                levels -= 1
-                if levels == 0 or len(q) == 0:
-                    break
-                final_node = q[-1]
+                levels_remaining -= 1
+                if levels_remaining == 0 or len(q) == 0:
+                    return result
+                else:
+                    final_node = q[-1]
         return result
 
 if __name__ == "__main__":
     result = data_to_graph_data_from_boot_nodes("graph-data-raw.json",6)
-    write_json_to_file("graph-data-d3-ready-boot-nodes.json", result)
+    write_json_to_file("graph-data-d3.json", result)

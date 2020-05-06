@@ -74,5 +74,5 @@ def data_to_graph_data_from_boot_nodes(filename, levels):
         return result
 
 if __name__ == "__main__":
-    result = data_to_graph_data_from_boot_nodes("graph-data-raw.json",6)
+    result = data_to_graph_data_from_boot_nodes("graph-data-raw.json",3)
     write_json_to_file("graph-data-d3.json", result)

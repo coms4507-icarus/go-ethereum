@@ -209,9 +209,10 @@ func icarusCrawl(ctx *cli.Context) error {
 	it := disc.RandomNodes()
 
 	// Populate graph
-	it.Next()
-	disc.IcarusCrawl(it.Node(), nodeCh, graph)
-
+	//it.Next()
+	//disc.IcarusCrawl(it.Node(), nodeCh, graph)
+	disc.IcarusCrawl2(it, nodeCh, graph)
+	fmt.Println("node count:", len(graph))
 	// Convert to json and write to file
 	jsonGraph, err := json.Marshal(graph)
 	if err != nil {

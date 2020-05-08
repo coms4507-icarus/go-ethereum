@@ -333,8 +333,7 @@ func (t *UDPv4) Resolve(n *enode.Node) *enode.Node {
 }
 
 // Mike's code
-// Resolve searches for a specific node with the given ID and tries to get the most recent
-// version of the node record for it. It returns n if the node could not be resolved.
+
 func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[string][]string) {
 	// perform a network lookup.
 	var key enode.Secp256k1
@@ -361,6 +360,45 @@ func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[st
 			graph[currentIP] = append(graph[currentIP], newNode.IP().String())
 			//graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
 		}
+	}
+}
+func (t *UDPv4) IcarusCrawl2(it enode.Iterator, nodeCh chan *enode.Node, graph map[string][]string) {
+	// perform a network lookup.
+	go nodesFromIteratorToChannel(it, nodeCh)
+	var key enode.Secp256k1
+loop:
+	for i := 0; i < 10000; i++ { // TODO: Do I want an infinite loop here?
+		select {
+		case currentNode, hasNodes := <-nodeCh:
+			if !hasNodes {
+				fmt.Println("Running out of nodes")
+				break loop
+			}
+			currentIP := currentNode.IP().String()
+			if _, existsInGraph := graph[currentIP]; existsInGraph {
+				continue // Node already exists in graph
+			}
+			if currentNode.Load(&key) != nil {
+				continue // no secp256k1 key
+			}
+			// FIXME: this goroutine raises error
+			go func(pubKey enode.Secp256k1) {
+				result := t.LookupPubkey((*ecdsa.PublicKey)(&pubKey))
+				for _, newNode := range result {
+					// Add to node channel
+					nodeCh <- newNode
+					// TODO: do we want 2 ways, i.e. an undirected graph? ethereum doesn't seem to work that way
+					graph[currentIP] = append(graph[currentIP], newNode.IP().String())
+					//graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
+				}
+			}(key)
+		}
+	}
+}
+
+func nodesFromIteratorToChannel(it enode.Iterator, nodeCh chan *enode.Node) {
+	for it.Next() {
+		nodeCh <- it.Node()
 	}
 }
 

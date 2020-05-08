@@ -17,8 +17,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -198,22 +200,40 @@ func icarusCrawl(ctx *cli.Context) error {
 	if ctx.NArg() < 1 {
 		return fmt.Errorf("need nodes file as argument")
 	}
+	graph := make(map[string][]string)
 	nodesFile := ctx.Args().First()
-	var inputSet nodeSet
-
+	nodeCh := make(chan *enode.Node)
 	disc := startV4(ctx)
 	defer disc.Close()
-	c := newCrawler(inputSet, disc, disc.RandomNodes())
-	c.revalidateInterval = 10 * time.Minute
-	output := c.run(ctx.Duration(crawlTimeoutFlag.Name))
-	writeNodesJSON(nodesFile, output)
+
+	it := disc.RandomNodes()
+
+	// Populate graph
+	it.Next()
+	disc.IcarusCrawl(it.Node(), nodeCh, graph)
+
+	// Convert to json and write to file
+	jsonGraph, err := json.Marshal(graph)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	jsonString := string(jsonGraph)
+	f, err := os.OpenFile(nodesFile, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(f, jsonString)
+	if err != nil {
+		f.Close()
+		return err
+	}
+	err = f.Close()
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 	return nil
-	//n := getNodeArg(ctx)
-	//disc := startV4(ctx)
-	//defer disc.Close()
-	//
-	//fmt.Println(disc.Resolve(n).String())
-	//return nil
 }
 
 // end Mike's code

@@ -335,25 +335,32 @@ func (t *UDPv4) Resolve(n *enode.Node) *enode.Node {
 // Mike's code
 // Resolve searches for a specific node with the given ID and tries to get the most recent
 // version of the node record for it. It returns n if the node could not be resolved.
-func (t *UDPv4) IcarusCrawl(n *enode.Node) *enode.Node {
-
+func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[string][]string) {
 	// perform a network lookup.
 	var key enode.Secp256k1
-	result := t.LookupPubkey((*ecdsa.PublicKey)(&key))
-	for _, rn := range result {
-		if rn.ID() == n.ID() {
-			if rn, err := t.RequestENR(rn); err == nil {
-				return rn
-			}
+	nodes := []*enode.Node{n}
+	var currentNode *enode.Node
+	for i := 0; i < 10000; i++ { // TODO: Do I want an infinite loop here?
+		if len(nodes) == 0 {
+			break
 		}
-		// TODO: graph processing here
-		// Flow
-		// if node already in graph
-		//    continue
-		// add edge that links 2 nodes to graph
-		// perform lookup on rn
+		// Pop last elem to currentNode
+		currentNode, nodes = nodes[len(nodes)-1], nodes[:len(nodes)-1]
+		currentIP := currentNode.IP().String()
+		if _, ok := graph[currentIP]; ok {
+			continue // Node already exists in graph
+		}
+		if currentNode.Load(&key) != nil {
+			continue // no secp256k1 key
+		}
+		result := t.LookupPubkey((*ecdsa.PublicKey)(&key))
+		nodes = append(nodes, result...)
+		for _, newNode := range result {
+			// TODO: do we want 2 ways, i.e. an undirected graph? ethereum doesn't seem to work that way
+			graph[currentIP] = append(graph[currentIP], newNode.IP().String())
+			graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
+		}
 	}
-	return n
 }
 
 // End Mike's code

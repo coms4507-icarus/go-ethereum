@@ -332,6 +332,32 @@ func (t *UDPv4) Resolve(n *enode.Node) *enode.Node {
 	return n
 }
 
+// Mike's code
+// Resolve searches for a specific node with the given ID and tries to get the most recent
+// version of the node record for it. It returns n if the node could not be resolved.
+func (t *UDPv4) IcarusCrawl(n *enode.Node) *enode.Node {
+
+	// perform a network lookup.
+	var key enode.Secp256k1
+	result := t.LookupPubkey((*ecdsa.PublicKey)(&key))
+	for _, rn := range result {
+		if rn.ID() == n.ID() {
+			if rn, err := t.RequestENR(rn); err == nil {
+				return rn
+			}
+		}
+		// TODO: graph processing here
+		// Flow
+		// if node already in graph
+		//    continue
+		// add edge that links 2 nodes to graph
+		// perform lookup on rn
+	}
+	return n
+}
+
+// End Mike's code
+
 func (t *UDPv4) ourEndpoint() rpcEndpoint {
 	n := t.Self()
 	a := &net.UDPAddr{IP: n.IP(), Port: n.UDP()}

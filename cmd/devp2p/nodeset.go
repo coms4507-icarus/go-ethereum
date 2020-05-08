@@ -66,6 +66,7 @@ func writeNodesJSON(file string, nodes nodeSet) {
 		os.Stdout.Write(nodesJSON)
 		return
 	}
+	fmt.Println(file)
 	if err := ioutil.WriteFile(file, nodesJSON, 0644); err != nil {
 		exit(err)
 	}

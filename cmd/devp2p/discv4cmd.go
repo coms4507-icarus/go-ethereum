@@ -40,6 +40,7 @@ var (
 			discv4ResolveCommand,
 			discv4ResolveJSONCommand,
 			discv4CrawlCommand,
+			icarusCrawlCommand,
 		},
 	}
 	discv4PingCommand = cli.Command{
@@ -74,6 +75,14 @@ var (
 		Action: discv4Crawl,
 		Flags:  []cli.Flag{bootnodesFlag, crawlTimeoutFlag},
 	}
+	// Mike's code
+	icarusCrawlCommand = cli.Command{
+		Name:   "icarus-crawl",
+		Usage:  "Crawl whole network and recursively ask nodes for their peers",
+		Action: icarusCrawl,
+		Flags:  []cli.Flag{bootnodesFlag},
+	}
+	// End Mike's code
 )
 
 var (
@@ -183,6 +192,31 @@ func discv4Crawl(ctx *cli.Context) error {
 	writeNodesJSON(nodesFile, output)
 	return nil
 }
+
+// Begin Mike's code
+func icarusCrawl(ctx *cli.Context) error {
+	if ctx.NArg() < 1 {
+		return fmt.Errorf("need nodes file as argument")
+	}
+	nodesFile := ctx.Args().First()
+	var inputSet nodeSet
+
+	disc := startV4(ctx)
+	defer disc.Close()
+	c := newCrawler(inputSet, disc, disc.RandomNodes())
+	c.revalidateInterval = 10 * time.Minute
+	output := c.run(ctx.Duration(crawlTimeoutFlag.Name))
+	writeNodesJSON(nodesFile, output)
+	return nil
+	//n := getNodeArg(ctx)
+	//disc := startV4(ctx)
+	//defer disc.Close()
+	//
+	//fmt.Println(disc.Resolve(n).String())
+	//return nil
+}
+
+// end Mike's code
 
 // startV4 starts an ephemeral discovery V4 node.
 func startV4(ctx *cli.Context) *discover.UDPv4 {

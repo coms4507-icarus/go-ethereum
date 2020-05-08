@@ -342,6 +342,7 @@ func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[st
 	var currentNode *enode.Node
 	for i := 0; i < 10000; i++ { // TODO: Do I want an infinite loop here?
 		if len(nodes) == 0 {
+			fmt.Println("Running out of nodes")
 			break
 		}
 		// Pop last elem to currentNode
@@ -358,7 +359,7 @@ func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[st
 		for _, newNode := range result {
 			// TODO: do we want 2 ways, i.e. an undirected graph? ethereum doesn't seem to work that way
 			graph[currentIP] = append(graph[currentIP], newNode.IP().String())
-			graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
+			//graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
 		}
 	}
 }

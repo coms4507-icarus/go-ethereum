@@ -336,17 +336,20 @@ func (t *UDPv4) Resolve(n *enode.Node) *enode.Node {
 
 func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[string][]string) {
 	// perform a network lookup.
+	fmt.Println("Icarus Crawl begins")
 	var key enode.Secp256k1
-	nodes := []*enode.Node{n}
+
+	queue := list.New()
+	queue.PushBack(n)
 	var currentNode *enode.Node
-	for i := 0; i < 10000; i++ { // TODO: Do I want an infinite loop here?
-		if len(nodes) == 0 {
-			fmt.Println("Running out of nodes")
-			break
-		}
-		// Pop last elem to currentNode
-		currentNode, nodes = nodes[len(nodes)-1], nodes[:len(nodes)-1]
+	//fmt.Printf("%v", nodes)
+	for queue.Len() > 0 {
+		fmt.Println("Icarus Crawl Loop begins")
+		element := queue.Front()
+		queue.Remove(element)
+		currentNode = element.Value.(*enode.Node)
 		currentIP := currentNode.IP().String()
+		fmt.Printf(currentIP)
 		if _, ok := graph[currentIP]; ok {
 			continue // Node already exists in graph
 		}
@@ -354,11 +357,11 @@ func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[st
 			continue // no secp256k1 key
 		}
 		result := t.LookupPubkey((*ecdsa.PublicKey)(&key))
-		nodes = append(nodes, result...)
+		for i := 0; i < len(result); i++ {
+			queue.PushBack(result[i])
+		}
 		for _, newNode := range result {
-			// TODO: do we want 2 ways, i.e. an undirected graph? ethereum doesn't seem to work that way
 			graph[currentIP] = append(graph[currentIP], newNode.IP().String())
-			//graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
 		}
 	}
 }

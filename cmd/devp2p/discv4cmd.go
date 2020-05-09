@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -207,33 +208,22 @@ func icarusCrawl(ctx *cli.Context) error {
 	defer disc.Close()
 
 	it := disc.RandomNodes()
-
+	fmt.Println("Got random nodes")
+	fmt.Printf("%v", it.Node())
+	fmt.Printf("%v", it.Next())
 	// Populate graph
-	//it.Next()
-	//disc.IcarusCrawl(it.Node(), nodeCh, graph)
-	disc.IcarusCrawl2(it, nodeCh, graph)
-	fmt.Println("node count:", len(graph))
+	it.Next()
+	disc.IcarusCrawl(it.Node(), nodeCh, graph)
+	// disc.IcarusCrawl2(it, nodeCh, graph)
+
+	fmt.Println("Finished with node count:", len(graph))
 	// Convert to json and write to file
 	jsonGraph, err := json.Marshal(graph)
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
 	}
-	jsonString := string(jsonGraph)
-	f, err := os.OpenFile(nodesFile, os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	_, err = fmt.Fprintln(f, jsonString)
-	if err != nil {
-		f.Close()
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
+	ioutil.WriteFile(nodesFile, jsonGraph, os.ModePerm)
 	return nil
 }
 

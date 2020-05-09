@@ -35,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/p2p/netutil"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/mike-fam/icarus/graph"
 )
 
 // Errors
@@ -333,8 +334,7 @@ func (t *UDPv4) Resolve(n *enode.Node) *enode.Node {
 }
 
 // Mike's code
-// Resolve searches for a specific node with the given ID and tries to get the most recent
-// version of the node record for it. It returns n if the node could not be resolved.
+
 func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[string][]string) {
 	// perform a network lookup.
 	var key enode.Secp256k1
@@ -361,6 +361,45 @@ func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[st
 			graph[currentIP] = append(graph[currentIP], newNode.IP().String())
 			//graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
 		}
+	}
+}
+func (t *UDPv4) IcarusCrawl2(it enode.Iterator, nodeCh chan *enode.Node, graph *graph.ThreadSafeGraph) {
+	// perform a network lookup.
+	go nodesFromIteratorToChannel(it, nodeCh)
+	var key enode.Secp256k1
+loop:
+	for {
+		select {
+		case currentNode, hasNodes := <-nodeCh:
+			if !hasNodes {
+				fmt.Println("Running out of nodes")
+				break loop
+			}
+			currentIP := currentNode.IP().String()
+			if graph.NodeExists(currentIP) {
+				continue // Node already exists in graph
+			}
+			if currentNode.Load(&key) != nil {
+				continue // no secp256k1 key
+			}
+			go func(pubKey enode.Secp256k1) {
+				result := t.LookupPubkey((*ecdsa.PublicKey)(&pubKey))
+				fmt.Println("New node found. Node count:", len(graph.Graph))
+				for _, newNode := range result {
+					// Add to node channel
+					nodeCh <- newNode
+					graph.AddEdge(currentIP, newNode.IP().String())
+					// TODO: instead of adding a new edge, make post request here
+					//graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
+				}
+			}(key)
+		}
+	}
+}
+
+func nodesFromIteratorToChannel(it enode.Iterator, nodeCh chan *enode.Node) {
+	for it.Next() {
+		nodeCh <- it.Node()
 	}
 }
 

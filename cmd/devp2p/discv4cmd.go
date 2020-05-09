@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/mike-fam/icarus/graph"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -200,7 +201,7 @@ func icarusCrawl(ctx *cli.Context) error {
 	if ctx.NArg() < 1 {
 		return fmt.Errorf("need nodes file as argument")
 	}
-	graph := make(map[string][]string)
+	safeGraph := graph.NewThreadSafeGraph()
 	nodesFile := ctx.Args().First()
 	nodeCh := make(chan *enode.Node)
 	disc := startV4(ctx)
@@ -208,12 +209,13 @@ func icarusCrawl(ctx *cli.Context) error {
 
 	it := disc.RandomNodes()
 
-	// Populate graph
-	it.Next()
-	disc.IcarusCrawl(it.Node(), nodeCh, graph)
-
+	// Populate safeGraph
+	//it.Next()
+	//disc.IcarusCrawl(it.Node(), nodeCh, safeGraph)
+	disc.IcarusCrawl2(it, nodeCh, safeGraph)
+	fmt.Println("node count:", len(safeGraph.Graph))
 	// Convert to json and write to file
-	jsonGraph, err := json.Marshal(graph)
+	jsonGraph, err := json.Marshal(safeGraph)
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
@@ -230,9 +232,9 @@ func icarusCrawl(ctx *cli.Context) error {
 	}
 	err = f.Close()
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
+	fmt.Println("File created successfully")
 	return nil
 }
 

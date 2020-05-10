@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"sync"
@@ -428,8 +427,8 @@ loop:
 						response, _ := http.Post("https://js91jsysh8.execute-api.ap-southeast-2.amazonaws.com/dev/nodes", "application/json", bytes.NewBuffer(jsonGraph))
 						//response, _ := http.Post("http://localhost:8000", "application/json", bytes.NewBuffer(jsonGraph))
 						defer response.Body.Close()
-						body, _ := ioutil.ReadAll(response.Body)
-						fmt.Println(string(body))
+						//body, _ := ioutil.ReadAll(response.Body)
+						//fmt.Println(string(body))
 						//fmt.Println(string(jsonGraph))
 						fmt.Println("sending data to server...")
 					}

@@ -22,10 +22,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	crand "crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
@@ -363,12 +366,32 @@ func (t *UDPv4) IcarusCrawl(n *enode.Node, nodeCh chan *enode.Node, graph map[st
 		}
 	}
 }
+
+type requestCounter struct {
+	sync.RWMutex
+	counter int
+}
+
+func (c *requestCounter) value() int {
+	c.RLock()
+	defer c.RUnlock()
+	return c.counter
+}
+
+func (c *requestCounter) increment() {
+	c.Lock()
+	defer c.Unlock()
+	c.counter++
+}
+
 func (t *UDPv4) IcarusCrawl2(it enode.Iterator, nodeCh chan *enode.Node, graph *graph.ThreadSafeGraph) {
 	// perform a network lookup.
 	go nodesFromIteratorToChannel(it, nodeCh)
 	var key enode.Secp256k1
+	counter := &requestCounter{counter: 0}
 loop:
 	for {
+
 		select {
 		case currentNode, hasNodes := <-nodeCh:
 			if !hasNodes {
@@ -384,15 +407,34 @@ loop:
 			}
 			go func(pubKey enode.Secp256k1) {
 				result := t.LookupPubkey((*ecdsa.PublicKey)(&pubKey))
-				fmt.Println("New node found. Node count:", len(graph.Graph))
+				fmt.Println("Node count:", graph.Size())
 				for _, newNode := range result {
 					// Add to node channel
 					nodeCh <- newNode
 					graph.AddEdge(currentIP, newNode.IP().String())
-					// TODO: instead of adding a new edge, make post request here
 					//graph[newNode.IP().String()] = append(graph[newNode.IP().String()], currentIP)
 				}
 			}(key)
+
+			// Send data to server
+			go func() {
+				// Send post request for every 3000 nodes found
+				if nodesNum := graph.Size(); nodesNum%3000 < 10 {
+					// Only send request 1 time
+					if nodesNum/3000-1 == counter.value() {
+						counter.increment()
+						// FIXME: no error handling is disgusting
+						jsonGraph, _ := json.Marshal(graph.Graph())
+						response, _ := http.Post("https://js91jsysh8.execute-api.ap-southeast-2.amazonaws.com/dev/nodes", "application/json", bytes.NewBuffer(jsonGraph))
+						//response, _ := http.Post("http://localhost:8000", "application/json", bytes.NewBuffer(jsonGraph))
+						defer response.Body.Close()
+						body, _ := ioutil.ReadAll(response.Body)
+						fmt.Println(string(body))
+						//fmt.Println(string(jsonGraph))
+						fmt.Println("sending data to server...")
+					}
+				}
+			}()
 		}
 	}
 }

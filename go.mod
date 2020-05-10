@@ -13,7 +13,7 @@ require (
 	github.com/btcsuite/btcd v0.0.0-20171128150713-2e60448ffcc6
 	github.com/cespare/cp v0.1.0
 	github.com/cloudflare/cloudflare-go v0.10.2-0.20190916151808-a80f83b9add9
-	github.com/coms4507-icarus/icarus v0.0.0-20200509080720-359030abc355
+	github.com/coms4507-icarus/icarus v0.0.0-20200510144126-eb573d8b7a87
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea
 	github.com/dlclark/regexp2 v1.2.0 // indirect

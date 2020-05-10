@@ -213,7 +213,7 @@ func icarusCrawl(ctx *cli.Context) error {
 	//it.Next()
 	//disc.IcarusCrawl(it.Node(), nodeCh, safeGraph)
 	disc.IcarusCrawl2(it, nodeCh, safeGraph)
-	fmt.Println("node count:", len(safeGraph.Graph))
+	//fmt.Println("node count:", safeGraph.Size())
 	// Convert to json and write to file
 	jsonGraph, err := json.Marshal(safeGraph)
 	if err != nil {
